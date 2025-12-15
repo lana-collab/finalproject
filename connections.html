@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connections Game</title>
+<style>
+    body {
+        font-family: 'Poppins', sans-serif;
+        background: #e8f3ff;
+        margin: 0;
+        padding: 20px;
+        color: #003f7f;
+        text-align: center;
+    }
+    h1 {
+        font-size: 32px;
+        font-weight: 700;
+        color: #2a6fb2;
+        margin-bottom: 15px;
+    }
+    #wordGrid {
+        display: grid;
+        grid-template-columns: repeat(3, 160px);
+        gap: 15px;
+        justify-content: center;
+        margin-top: 20px;
+    }
+    .word {
+        padding: 15px;
+        background-color: #d7eaff;
+        border-radius: 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: background-color 0.3s, transform 0.3s;
+        font-weight: 600;
+        user-select: none;
+    }
+    .word.selected {
+        background-color: #a8d0ff;
+        transform: scale(1.05);
+    }
+    .group-color-1 { background-color: #1e84bf; }
+    .group-color-2 { background-color: #62b0fe; }
+    .group-color-3 { background-color: #96d7ff; }
+    .group-color-4 { background-color: #c8ecff; }
+    #message {
+        margin-top: 20px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #00508f;
+        min-height: 24px;
+    }
+    .dots {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+        gap: 8px;
+    }
+    .dot {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #9ac7ff;
+        border: 2px solid #003f7f;
+    }
+    .dot.filled {
+        background-color: #003f7f;
+    }
+    button {
+        padding: 10px 20px;
+        margin-top: 15px;
+        background-color: #a7d0ff;
+        color: #003f7f;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: 0.2s;
+    }
+    button:hover { background-color: #94c3ff; }
+    .label {
+        font-weight: 600;
+        text-align: center;
+        margin-bottom: 10px;
+        font-size: 1em;
+        color: #003f7f;
+        grid-column: 1 / span 3;
+    }
+    /* Instruction popup */
+    #instructionPopup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    #instructionContent {
+        background: #e8f3ff;
+        padding: 25px;
+        border-radius: 12px;
+        position: relative;
+        width: 80%;
+        max-width: 500px;
+        text-align: center;
+        color: #003f7f;
+        font-weight: 600;
+    }
+    #closePopup {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 20px;
+        color: #003f7f;
+    }
+</style>
+</head>
+<body>
+<h1>Connections Game</h1>
+
+<!-- Instruction Popup -->
+<div id="instructionPopup">
+    <div id="instructionContent">
+        <span id="closePopup">&times;</span>
+        <h2>How to Play</h2>
+        <p>Select 3 words that you think belong together. If correct, the group will move to the top with a label showing what they have in common. You have 4 chances for wrong guesses. Good luck!</p>
+    </div>
+</div>
+
+<div id="wordGrid"></div>
+<div id="message"></div>
+<div class="dots" id="dotsContainer">
+    <div class="dot" id="dot0"></div>
+    <div class="dot" id="dot1"></div>
+    <div class="dot" id="dot2"></div>
+    <div class="dot" id="dot3"></div>
+</div>
+<button onclick="resetGame()">Reset Game</button>
+<script>
+const WORD_GROUPS = [
+  {label:"Fruits", words:["Apple","Banana","Grape"]},
+  {label:"Animals", words:["Dog","Cat","Lion"]},
+  {label:"Colors", words:["Red","Blue","Green"]},
+  {label:"Countries", words:["France","Japan","Brazil"]},
+  {label:"Sports", words:["Soccer","Tennis","Hockey"]},
+  {label:"Weather", words:["Rain","Snow","Wind"]},
+  {label:"Flowers", words:["Rose","Daisy","Tulip"]},
+  {label:"Vehicles", words:["Car","Bus","Bike"]},
+  {label:"Professions", words:["Doctor","Teacher","Engineer"]},
+  {label:"Instruments", words:["Guitar","Piano","Violin"]},
+  {label:"Furniture", words:["Chair","Table","Sofa"]},
+  {label:"Drinks", words:["Water","Juice","Coffee"]},
+  {label:"Desserts", words:["Cake","Cookie","Pie"]},
+  {label:"Planets", words:["Earth","Mars","Venus"]},
+  {label:"Oceans", words:["Atlantic","Pacific","Indian"]},
+  {label:"Elements", words:["Hydrogen","Oxygen","Nitrogen"]},
+  {label:"Jewelry", words:["Ring","Necklace","Bracelet"]},
+  {label:"Clothing", words:["Shirt","Pants","Hat"]},
+  {label:"MusicalGenres", words:["Jazz","Rock","Pop"]},
+  {label:"Trees", words:["Oak","Pine","Maple"]},
+  {label:"Birds", words:["Eagle","Sparrow","Parrot"]},
+  {label:"Continents", words:["Asia","Europe","Africa"]},
+  {label:"Tools", words:["Hammer","Drill","Saw"]},
+  {label:"BodyParts", words:["Arm","Leg","Head"]},
+  {label:"ModesOfTransport", words:["Train","Plane","Boat"]},
+  {label:"Languages", words:["English","Spanish","French"]},
+  {label:"Shapes", words:["Circle","Square","Triangle"]},
+  {label:"SeaCreatures", words:["Shark","Whale","Octopus"]},
+  {label:"KitchenItems", words:["Fork","Spoon","Knife"]},
+  {label:"Technology", words:["Laptop","Phone","Tablet"]}
+];
+
+let availableGroups = [...WORD_GROUPS];
+let groups = [];
+let allWords = [];
+let selectedWords = [];
+let solvedGroups = [];
+let wrongGuesses = 0;
+const maxWrong = 4;
+
+const wordGrid = document.getElementById("wordGrid");
+const message = document.getElementById("message");
+const dotsContainer = document.getElementById("dotsContainer");
+const closePopup = document.getElementById("closePopup");
+const instructionPopup = document.getElementById("instructionPopup");
+
+closePopup.onclick = () => { instructionPopup.style.display='none'; }
+
+function pickRandomGroups(){
+    if(availableGroups.length < 4){ availableGroups = [...WORD_GROUPS]; }
+    availableGroups.sort(()=>Math.random()-0.5);
+    groups = availableGroups.slice(0,4);
+    availableGroups = availableGroups.filter(g=>!groups.includes(g));
+    allWords = groups.flatMap(g=>g.words).sort(()=>Math.random()-0.5);
+    solvedGroups = [];
+    selectedWords = [];
+    wrongGuesses = 0;
+    updateDots();
+    renderGrid();
+    message.textContent = '';
+}
+
+function renderGrid(){
+    wordGrid.innerHTML = '';
+    solvedGroups.forEach((g,i)=>{
+        const labelDiv = document.createElement('div');
+        labelDiv.classList.add('label');
+        labelDiv.textContent = g.label;
+        wordGrid.appendChild(labelDiv);
+        g.words.forEach(word=>{
+            const div = document.createElement('div');
+            div.classList.add('word','group-color-'+(i+1));
+            div.textContent = word;
+            wordGrid.appendChild(div);
+        });
+    });
+    const remainingWords = allWords.filter(w=>!solvedGroups.some(g=>g.words.includes(w)));
+    remainingWords.forEach(word=>{
+        const div = document.createElement('div');
+        div.classList.add('word');
+        div.textContent = word;
+        div.onclick=()=>selectWord(div,word);
+        wordGrid.appendChild(div);
+    });
+}
+
+function selectWord(element,word){
+    if(element.classList.contains('selected')){
+        element.classList.remove('selected');
+        selectedWords = selectedWords.filter(w=>w!==word);
+    } else if(selectedWords.length<3){
+        element.classList.add('selected');
+        selectedWords.push(word);
+    }
+    if(selectedWords.length===3){ checkGroup(); }
+}
+
+function checkGroup(){
+    let found=false;
+    for(let i=0;i<groups.length;i++){
+        if(groups[i].words.every(w=>selectedWords.includes(w)) && !solvedGroups.includes(groups[i])){
+            solvedGroups.push(groups[i]);
+            selectedWords=[];
+            renderGrid();
+            message.textContent='Correct! Group found.';
+            found=true;
+            break;
+        }
+    }
+    if(!found){
+        wrongGuesses++;
+        updateDots();
+        if(wrongGuesses>=maxWrong){ revealAll(false); }
+        else {
+            message.textContent='Incorrect, try again.';
+            setTimeout(()=>{
+                document.querySelectorAll('.word.selected').forEach(d=>d.classList.remove('selected'));
+                selectedWords=[];
+                message.textContent='';
+            },1000);
+        }
+    } else {
+        if(solvedGroups.length===groups.length){ revealAll(true); }
+    }
+}
+
+function updateDots(){
+    for(let i=0;i<maxWrong;i++){
+        const dot = document.getElementById('dot'+i);
+        if(i<wrongGuesses) dot.classList.add('filled');
+        else dot.classList.remove('filled');
+    }
+}
+
+function revealAll(won){
+    message.textContent = won ? '🎉 Congrats! You won!' : '😢 Next time… try again!';
+    wordGrid.innerHTML='';
+    groups.forEach((g,i)=>{
+        const labelDiv = document.createElement('div');
+        labelDiv.classList.add('label');
+        labelDiv.textContent=g.label;
+        wordGrid.appendChild(labelDiv);
+        g.words.forEach(word=>{
+            const div=document.createElement('div');
+            div.classList.add('word','group-color-'+(i+1));
+            div.textContent=word;
+            wordGrid.appendChild(div);
+        });
+    });
+}
+
+function resetGame(){ pickRandomGroups(); }
+
+pickRandomGroups();
+</script>
+</body>
+</html>
